@@ -65,6 +65,10 @@ class gpuUtils {
         }
       });
 
+      //TO DO
+      //BitReverseIndex(index,n)
+      //BitReverseComplexArray(array)
+
       this.getRecursive = this.gpu.createKernel(function (input,p){ //Not sure about this yet
         var recursive_result = new Array(2);
         recursive_result[0] = input[0][this.thread.x*p + this.thread.y];
@@ -93,7 +97,7 @@ class gpuUtils {
         //this.getRecursive(input,p);
 
         if(m > 1){
-          recursive_result = this.fft(recursive_result,len,inverse); //This is a scoping issue, need to do this in the combined kernel
+          recursive_result = this.fft(recursive_result,len,inverse); //This is a scoping issue, need to do this in the combined kernel and have it call itself to not pass things between CPU and GPU at all unless absolutely necessary (only for input and output ideally)
         }
 
         //This section should be scoped into its own kernel as it is its own loop
