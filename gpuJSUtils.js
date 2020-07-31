@@ -71,7 +71,7 @@ class gpuUtils {
 
       this.getRecursive = this.gpu.createKernel(function (input,p){ //Not sure about this yet
         var recursive_result = new Array(2);
-        recursive_result[0] = input[0][this.thread.x*p + this.thread.y];
+        recursive_result[0] = input[0][this.thread.x*p + this.thread.y]; //this.thread.y does not work on a 1D output. Need to solve this
         recursive_result[1] = input[1][this.thread.x*p + this.thread.y];
         return recursive_result
       }).setOutput([100])
