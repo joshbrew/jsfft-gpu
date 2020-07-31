@@ -111,7 +111,7 @@ class gpuUtils {
       .setDynamicOutput(true)
       .setDynamicArguments(true); //setDynamic output allows setOutput to be called for different sized arrays
 
-
+      //Cooley-Tukey Algorithm based on jsfft
       //UNFINISHED. This needs to be broken up properly in separate kernels then combined. Reference fft.js
       this.FFT_Recursive = this.gpu.createKernel(function(input, len, inverse){ //This needs to be done with a combined kernel so that getRecursive can be called
         
