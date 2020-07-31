@@ -69,7 +69,7 @@ class gpuUtils {
       //BitReverseIndex(index,n)
       //BitReverseComplexArray(array)
 
-      this.getRecursive = this.gpu.createKernel(function (input,p){ //Not sure about this yet
+      this.getRecursive = this.gpu.createKernel(function (input,p){ //Not sure about this yet.
         var recursive_result = new Array(2);
         recursive_result[0] = input[0][this.thread.x*p + this.thread.y]; //this.thread.y does not work on a 1D output. Need to solve this
         recursive_result[1] = input[1][this.thread.x*p + this.thread.y];
@@ -149,6 +149,8 @@ class gpuUtils {
       }).setOutput([100])
       .setDynamicArguments(true)
       .setDynamicOutput(true)
+
+      //TODO, abstract this to handle 2D input, i.e. each row is one channel of data, so the whole input stream will be decoded one one kernel and results outputted altogether. Saves memory big time
   }
 }
 
