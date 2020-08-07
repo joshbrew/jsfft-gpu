@@ -5,6 +5,8 @@ class gpuUtils {
       this.kernel;
       this.PI = 3.141592653589793;
       this.SQRT1_2 = 0.7071067811865476
+
+      this.addFunctions();
   }
 
   addFunctions() { //Use kernel map instead? or this.kernel.addfunction? Test performance!
@@ -69,7 +71,7 @@ class gpuUtils {
         var real = 0;
         var imag = 0;
         for(var i = 0; i<len; i++){
-          var shared = TWOPI*freq*i/len; //this.thread.x is the target frequency
+          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
           real = real+signal[i]*Math.cos(shared);
           imag = imag-signal[i]*Math.sin(shared);
         }
@@ -122,7 +124,7 @@ class gpuUtils {
           return array;
         }
       */
-
+      /*
       this.getRecursive = this.gpu.createKernel(function (input,p){ //Not sure about this yet.
         var recursive_result = new Array(2);
         recursive_result[0] = input[0][this.thread.x*p + this.thread.y]; //this.thread.y does not work on a 1D output. Need to solve this
@@ -137,7 +139,7 @@ class gpuUtils {
 
       //UNFINISHED. This needs to be broken up properly in separate kernels then combined. Reference fft.js
       this.FFT_Recursive = this.gpu.createKernel(function(input, len, inverse){ //This needs to be done with a combined kernel so that getRecursive can be called
-        
+        */
         /* OG CODE
           const n = input.length;
 
@@ -155,7 +157,7 @@ class gpuUtils {
           let recursive_result = new ComplexArray(m, input.ArrayType);
 
         */
-        
+        /*
         if(len === 1){
           return input;
         }
@@ -164,7 +166,7 @@ class gpuUtils {
         const m = en/p;
         const normalize = 1 / Math.sqrt(p);
         var recursive_result = [];
-
+        */
         /* OG CODE
           // Loops go like O(n Σ p_i), where p_i are the prime factors of n.
           // for a power of a prime, p, this reduces to O(n p log_p n)
@@ -180,7 +182,7 @@ class gpuUtils {
 
         */
 
-        
+        /*
         //Get Recursive Result
         //Need to put this into a combined kernel
         this.getRecursive.setOutput([len]);
@@ -189,7 +191,7 @@ class gpuUtils {
         if(m > 1){
           recursive_result = this.fft(recursive_result,len,inverse); //This is a scoping issue, need to do this in the combined kernel and have it call itself to not pass things between CPU and GPU at all unless absolutely necessary (only for input and output ideally)
         }
-
+        */
         /*
         
             const del_f_r = Math.cos(2*PI*j/n);
@@ -212,7 +214,7 @@ class gpuUtils {
           }
         */
 
-
+        /*
         //This section should be scoped into its own kernel as it is its own loop
         const del_f_r = Math.cos(2*PI*this.thread.y/len);
         var del_f_i = 0;
@@ -242,20 +244,12 @@ class gpuUtils {
       .setLoopMaxIterations(1000) //Set to input length if greater than 1000 (default)
       .setDynamicOutput(true)
       .setDynamicArguments(true); //setDynamic output allows setOutput to be called for different sized arrays
-
+      */
       //WIP
+      /*
       this.FFT_Iterative = this.gpu.createKernel(function(input, len, inverse){
         var output = new Array(2);
-
-          /*
-          const n = input.length;
-
-          const output = BitReverseComplexArray(input);
-          const output_r = output.real;
-          const output_i = output.imag;
-
-
-          */
+      
           const n = len;
 
           const noutput = BitReverseComplexArray(input);
@@ -298,6 +292,7 @@ class gpuUtils {
 
           return output;
         */
+       /*
        return noutput;
 
 
@@ -305,7 +300,8 @@ class gpuUtils {
       .setLoopMaxIterations(1000) //Set to input length if greater than 1000 (default)
       .setDynamicOutput(true)
       .setDynamicArguments(true);
-
+      */
+      /*
       this.fft = this.gpu.combineKernels(this.getRecursive,this.FFT_Recursive,this.FFT_Iterative, function(input,len){
         if (len & (len - 1)) {
           return FFT_Recursive(input, inverse); // Faster
@@ -315,7 +311,7 @@ class gpuUtils {
       }).setOutput([100])
       .setDynamicArguments(true)
       .setDynamicOutput(true)
-
+      */
       //TODO, abstract this to handle 2D input, i.e. each row is one channel of data, so the whole input stream will be decoded one one kernel and results outputted altogether. Saves memory big time
   }
 }
