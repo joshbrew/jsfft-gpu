@@ -21,7 +21,8 @@
         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <script src="fft.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.15.1/dist/tf.min.js"></script>
-        
+        <script src="gpu-browser.min.js" charset="UTF-8"></script>
+        <script src="gpuJSUtils.js"></script>
         <script>
             var sineWave = [];
             var t = [];
@@ -86,7 +87,15 @@
             //console.log(fft);
             console.timeEnd("simpledft");
 
-            var orderedMags = [...mags.slice(Math.ceil(mags.length/2),amplitudeSpectrum.length),...mags.slice(0,Math.ceil(mags.length/2))];
+            
+            var gpuClass = new gpuUtils();
+            console.time("gpuDFT");
+            gpuClass.dft.setOutput([sineWave.length]);
+            gpuClass.dft.setLoopMaxIterations(sineWave.length);
+            var gpuresult = gpuClass.dft(sineWave,sineWave.length);
+            console.timeEnd("gpuDFT");
+
+            var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length/2),gpuresult.length),...gpuresult.slice(0,Math.ceil(gpuresult.length/2))];
             
 
             //tf.setBackend('webgl');
