@@ -12,8 +12,8 @@
         <div id="fftchart"></div>
         Phase Spectrum from jsFFT result
         <div id="phasechart"></div>
-        Tensorflow JS FFT result
-        <div id="tflowchart"></div>
+        Homebrew cfft.js result - it's whack at some sample rates and OK at others, but also really fast.
+        <div id="homebrewcfft"></div>
         <!--- DSP.JS result.
         <div id="dspchart"></div> --->
         <script src="homebrew-cfft.js"></script>
@@ -70,10 +70,10 @@
             var real = [];
             var imag = [];
             var mags = [];
-            var TWOPI = 2*3.141592653589793//*Math.sqrt(-1);
-            var maxFreq = sineWave.length/2;
-            var step = 0.25;
-            var freq = 0;
+            var TWOPI = 2*3.141592653589793
+            //var maxFreq = sineWave.length/2;
+            //var step = 0.25;
+            //var freq = 0;
             for(var k=0; k<sineWave.length;k++){
                 real.push(0);
                 imag.push(0);
@@ -94,6 +94,7 @@
             gpuClass.dft.setLoopMaxIterations(sineWave.length);
             var gpuresult = gpuClass.dft(sineWave,sineWave.length);
             console.timeEnd("gpuDFT");
+            console.log("GPU.js performance can vary");
 
             var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length/2),gpuresult.length),...gpuresult.slice(0,Math.ceil(gpuresult.length/2))];
             
@@ -147,7 +148,14 @@
                 xbins: {  size: 1  }
             }],
             [{
-                x:freqDom[0]
+                x:freqDom[0],
+                y:freqDom[1],
+                type: 'line',
+                marker: {
+                    color: "rgba(100,255,100, 1)"
+                },
+                name: 'homebrewcfft',    
+                xbins: {  size: 1  }
             }]
             ];
             var config = { 
@@ -158,6 +166,7 @@
             Plotly.newPlot("homebrewfft",data[2],undefined,config);
             Plotly.newPlot("fftchart",data[1],undefined,config);
             Plotly.newPlot("phasechart",data[3],undefined,config);
+            Plotly.newPlot("homebrewcfft",data[4],undefined,config);
 
             //alert("Check console for result!");
             
