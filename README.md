@@ -30,29 +30,29 @@ GPUJS simple DFT code
 //in head: <script src=gpu-browser.min.js charset="UTF-8"></script>
 var gpu = new GPU();
 gpu.addFunction(function DFT(signal,len,freq){ //Extract a particular frequency
-        var real = 0;
-        var imag = 0;
-        for(var i = 0; i<len; i++){
-          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
-          real = real+signal[i]*Math.cos(shared);
-          imag = imag-signal[i]*Math.sin(shared);
-        }
-        //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
-        return [real,imag]; //mag(real,imag)
-      });
+var real = 0;
+var imag = 0;
+for(var i = 0; i<len; i++){
+  var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
+  real = real+signal[i]*Math.cos(shared);
+  imag = imag-signal[i]*Math.sin(shared);
+}
+//var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
+return [real,imag]; //mag(real,imag)
+});
 
-      //Return frequency domain based on DFT
-      this.dft = this.gpu.createKernel(function (signal,len){
-        var result = DFT(signal,len,this.thread.x);
-          return mag(result[0],result[1]);
-      })
-      .setDynamicOutput(true)
-      .setDynamicArguments(true);
+//Return frequency domain based on DFT
+var dft = gpu.createKernel(function (signal,len){
+  var result = DFT(signal,len,this.thread.x);
+  return mag(result[0],result[1]);
+})
+.setDynamicOutput(true)
+.setDynamicArguments(true);
       
 console.time("gpuDFT");
-gpuClass.dft.setOutput([sineWave.length]);
-gpuClass.dft.setLoopMaxIterations(sineWave.length);
-var gpuresult = gpuClass.dft(sineWave,sineWave.length);
+dft.setOutput([sineWave.length]);
+dft.setLoopMaxIterations(sineWave.length);
+var gpuresult = dft(sineWave,sineWave.length);
 console.timeEnd("gpuDFT");
 
 //Order the magnitudes by frequency
