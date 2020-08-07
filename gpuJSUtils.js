@@ -65,6 +65,27 @@ class gpuUtils {
         }
       });
 
+      this.gpu.addFunction(function DFT(signal,len,freq){ //Extract a particular frequency
+        var real = 0;
+        var imag = 0;
+        for(var i = 0; i<len; i++){
+          var shared = TWOPI*freq*i/len; //this.thread.x is the
+          real = real+signal[i]*Math.cos(shared);
+          imag = imag-signal[i]*Math.sin(shared);
+        }
+
+        return [real,imag]
+      })
+
+      this.dft = this.gpu.createKernel(function (signal,len){
+          //mags.push(Math.sqrt(real[k]*real[k]+imag[k]*imag[k]));
+          return DFT(signal,len,this.thread.x);
+      })
+      .setOutput([signal.length])
+      .setDynamicOutput(true)
+      .setDynamicArguments(true)
+      .setLoopMaxIterations(signal.length);
+
       //TO DO
       //BitReverseIndex(index,n)
       //BitReverseComplexArray(array)
@@ -111,7 +132,7 @@ class gpuUtils {
       .setDynamicOutput(true)
       .setDynamicArguments(true); //setDynamic output allows setOutput to be called for different sized arrays
 
-      //Cooley-Tukey Algorithm based on jsfft
+
       //UNFINISHED. This needs to be broken up properly in separate kernels then combined. Reference fft.js
       this.FFT_Recursive = this.gpu.createKernel(function(input, len, inverse){ //This needs to be done with a combined kernel so that getRecursive can be called
         
@@ -138,7 +159,7 @@ class gpuUtils {
         }
 
         const p = lof(len);
-        const m = ;en/p;
+        const m = en/p;
         const normalize = 1 / Math.sqrt(p);
         var recursive_result = [];
 
@@ -235,9 +256,9 @@ class gpuUtils {
           */
           const n = len;
 
-          const output = BitReverseComplexArray(input);
-          const output_r = output[0];
-          const output_i = output[1];
+          const noutput = BitReverseComplexArray(input);
+          const output_r = noutput[0];
+          const output_i = noutput[1];
 
 
           /*
@@ -275,7 +296,7 @@ class gpuUtils {
 
           return output;
         */
-       return output;
+       return noutput;
 
 
       }).setOutput([100])
@@ -739,3 +760,56 @@ function testGPUCameraWobble() {
     image();
 
 }
+
+var mandebrotFrag = 
+`
+uniform sampler1D tex;
+uniform vec2 center;
+uniform float scale;
+uniform int iter;
+
+void main() {
+    vec2 z, c;
+
+    c.x = 1.3333 * (gl_TexCoord[0].x - 0.5) * scale - center.x;
+    c.y = (gl_TexCoord[0].y - 0.5) * scale - center.y;
+
+    int i;
+    z = c;
+    for(i=0; i<iter; i++) {
+        float x = (z.x * z.x - z.y * z.y) + c.x;
+        float y = (z.y * z.x + z.x * z.y) + c.y;
+
+        if((x * x + y * y) > 4.0) break;
+        z.x = x;
+        z.y = y;
+    }
+
+    gl_FragColor = texture1D(tex, (i == iter ? 0.0 : float(i)) / 100.0);
+}
+`;
+
+var juliaSetFrag =
+`
+uniform sampler1D tex;
+uniform vec2 c;
+uniform int iter;
+
+void main() {
+    vec2 z;
+    z.x = 3.0 * (gl_TexCoord[0].x - 0.5);
+    z.y = 2.0 * (gl_TexCoord[0].y - 0.5);
+
+    int i;
+    for(i=0; i<iter; i++) {
+        float x = (z.x * z.x - z.y * z.y) + c.x;
+        float y = (z.y * z.x + z.x * z.y) + c.y;
+
+        if((x * x + y * y) > 4.0) break;
+        z.x = x;
+        z.y = y;
+    }
+
+    gl_FragColor = texture1D(tex, (i == iter ? 0.0 : float(i)) / 100.0);
+}
+`;
