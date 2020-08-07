@@ -69,22 +69,23 @@ class gpuUtils {
         var real = 0;
         var imag = 0;
         for(var i = 0; i<len; i++){
-          var shared = TWOPI*freq*i/len; //this.thread.x is the
+          var shared = TWOPI*freq*i/len; //this.thread.x is the target frequency
           real = real+signal[i]*Math.cos(shared);
           imag = imag-signal[i]*Math.sin(shared);
         }
+        //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
+        return [real,imag]; //mag(real,imag)
+      });
 
-        return [real,imag]
-      })
-
+      //Return frequency domain based on DFT
       this.dft = this.gpu.createKernel(function (signal,len){
-          //mags.push(Math.sqrt(real[k]*real[k]+imag[k]*imag[k]));
-          return DFT(signal,len,this.thread.x);
+        var result = DFT(signal,len,this.thread.x);
+          return mag(result[0],result[1]);
       })
-      .setOutput([signal.length])
       .setDynamicOutput(true)
-      .setDynamicArguments(true)
-      .setLoopMaxIterations(signal.length);
+      .setDynamicArguments(true);
+      //.setOutput([signal.length]) //Call before running the kernel
+      //.setLoopMaxIterations(signal.length);
 
       //TO DO
       //BitReverseIndex(index,n)
@@ -127,11 +128,12 @@ class gpuUtils {
         recursive_result[0] = input[0][this.thread.x*p + this.thread.y]; //this.thread.y does not work on a 1D output. Need to solve this
         recursive_result[1] = input[1][this.thread.x*p + this.thread.y];
         return recursive_result
-      }).setOutput([100])
-      .setLoopMaxIterations(1000) //Set to input length if greater than 1000 (default)
+      })
       .setDynamicOutput(true)
       .setDynamicArguments(true); //setDynamic output allows setOutput to be called for different sized arrays
-
+      //.setOutput([100])
+      //.setLoopMaxIterations(1000) //Set to input length if greater than 1000 (default)
+      
 
       //UNFINISHED. This needs to be broken up properly in separate kernels then combined. Reference fft.js
       this.FFT_Recursive = this.gpu.createKernel(function(input, len, inverse){ //This needs to be done with a combined kernel so that getRecursive can be called
