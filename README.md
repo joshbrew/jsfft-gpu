@@ -30,6 +30,11 @@ console.timeEnd("simpledft");
 ```
 //in head: <script src=gpu-browser.min.js charset="UTF-8"></script>
 var gpu = new GPU();
+
+gpu.addFunction(function mag(a,b){ // Returns magnitude
+        return Math.sqrt(a*a + b*b);
+});
+
 gpu.addFunction(function DFT(signal,len,freq){ //Extract a particular frequency
 var real = 0;
 var imag = 0;
@@ -64,6 +69,12 @@ var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length/2),gpuresult.le
 ## GPUJS multichannel DFT, I got 40ms for 128channels and 512 samples per channel on page refresh. Not bad!!!
 ```
 var gpu = new GPU();
+
+      gpu.addFunction(function mag(a,b){ // Returns magnitude
+        return Math.sqrt(a*a + b*b);
+      });
+
+
       gpu.addFunction(function DFT(signal,len,freq){ //Extract a particular frequency
         var real = 0;
         var imag = 0;
@@ -89,7 +100,7 @@ var gpu = new GPU();
       });
       
             //More like a vertex buffer list to chunk through lists of signals
-      var listdft1D = this.gpu.createKernel(function(signals,len){
+      var listdft1D = gpu.createKernel(function(signals,len){
         var result = [0,0];
         if(this.thread.x <= len){
           result = DFT(signals,len,this.thread.x);
@@ -110,7 +121,7 @@ var gpu = new GPU();
             console.time("gpuListDFT");
             listdft1D.setOutput([sigList1D.length]); //Set output to length of list of signals
             listdft1D.setLoopMaxIterations(sineWave.length); //Set loop size to the length of one signal (assuming all are uniform length
-            var gpuresult3 = gpuClass.listdft1D(sigList1D,sineWave.length);
+            var gpuresult3 = listdft1D(sigList1D,sineWave.length);
 
             console.timeEnd("gpuListDFT");
         ;
