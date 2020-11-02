@@ -30,7 +30,7 @@
             var fs = 512; // Sample rate
             var freq = 10; // Generate this frequency
             var increment = 1/fs; //x-axis time increment based on sample rate
-            var sec = 10; //Seconds of data to generate 
+            var sec = 4; //Seconds of data to generate 
             document.getElementById("freq").innerHTML = freq + " Hz, at "+fs+" samples per sec";
             for (var ti = 0; ti < sec-increment; ti+=increment){ //200 sps, 3 sec
                 var amplitude = Math.sin(2*Math.PI*freq*ti);
@@ -93,66 +93,35 @@
             console.time("gpuDFT (1 channel)");
             gpuClass.dft.setOutput([sineWave.length]);
             gpuClass.dft.setLoopMaxIterations(sineWave.length);
-            var gpuresult = gpuClass.dft(sineWave,sineWave.length);
+            var gpuresult = gpuClass.dft(sineWave,sineWave.length).toArray();
             console.timeEnd("gpuDFT (1 channel)");
             console.log("GPU.js performance can vary");
 
             var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length*.5),gpuresult.length),...gpuresult.slice(0,Math.ceil(gpuresult.length*.5))];
-            console.log(orderedMags.length);
-            var sigList2D = [sineWave,sineWave,sineWave];
+            //console.log(orderedMags.length);
+            //var sigList2D = [sineWave,sineWave,sineWave];
             
             
-            var sigList1D = [...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave];
+            //var sigListBuffer = [...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave];
             //console.log(sigList1D);
-            console.time("gpuListDFT (128 channels)");
-            gpuClass.listdft1D_windowed.setOutput([sigList1D.length]); //Set output to length of list of signals
+
+            var signalBuffer = [sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave,sineWave];
+            var freqStart = 0;
+            var freqEnd = 50;
+            var freqEnd_nyquist = 50*2; //2x the end frequency of our bandpass (nyquist sampling rate)
+
+            console.time("gpuListDFT (128 channels, ordered)");
+            gpuClass.listdft1D_windowed.setOutput([signalBuffer[0].length*signalBuffer.length]); //Set output to length of list of signals
             gpuClass.listdft1D_windowed.setLoopMaxIterations(sineWave.length); //Set loop size to the length of one signal (assuming all are uniform length)
             //var gpuresult2 = gpuClass.listdft2D(sigList2D);
             //var gpuresult3 = gpuClass.listdft1D(sigList1D,sineWave.length/sec);
-            freqStart = 0;
-            freqEnd_nyquist = 50*2; //2x the end frequency of our bandpass (nyquist sampling rate)
-
-            var gpuresult3 = gpuClass.listdft1D_windowed(sigList1D,sineWave.length/sec,freqStart,freqEnd_nyquist);
-            console.timeEnd("gpuListDFT (128 channels)");
-            //console.log(gpuresult3)
-            orderedMagsList = [];
-            posMagsList = [];
-            for(var i = 0; i < gpuresult3.length; i+=sineWave.length){
-                if(i < sineWave.length / sec) {
-                    posMagsList.push([...gpuresult3.slice(i,Math.ceil(sineWave.length*.5+i))]);
-                    orderedMagsList.push([...gpuresult3.slice(Math.ceil(sineWave.length*.5+i),sineWave.length+i),...gpuresult3.slice(i,Math.ceil(sineWave.length*.5+i))]);
-                }
-            }
-
-            var summedMags = [];
-            //console.log(posMagsList);
-            if(sec > 1) { //Need to sum results when sample time > 1 sec
-                //for(var k = 0; k < 128; k++){
-                    //console.log(k)
-                    for(var i = 0; i < posMagsList[0].length; i++ ){
-                        if(i < fs){
-                            summedMags.push(posMagsList[0][i]);
-                            //if (i === 0 ) { console.log(summedMags[0]); }
-                        }
-                        else {
-                            var j = i-fs*Math.floor(i/fs);
-                            summedMags[j] = (summedMags[j] * posMagsList[0][i-1]/posMagsList[0].length);
-                            //if (j === 0 ) { console.log(summedMags[j]); }
-                        }
-
-                    }
-                    summedMags = [...summedMags.slice(0,Math.ceil(summedMags.length*0.5))]
-                //}
-            }
-            else {summedMags = posMagsList[0];}
-            
-            console.log(summedMags.length);
-
-            var fftwindow = [];
-            for (i = 0; i < Math.ceil(0.5*sineWave.length/sec); i++){
-                fftwindow.push(freqStart + (freqEnd_nyquist-freqStart)*i/(sineWave.length/sec));
-            }
-            //console.log(gpuresult3.length)
+            var summedMags = gpuClass.MultiChannelDFT_BandPass(signalBuffer,sec,freqStart,freqEnd);
+           
+            console.timeEnd("gpuListDFT (128 channels, ordered)");
+           
+            var fftwindow = gpuClass.bandPassWindow(freqStart,freqEnd,fs)
+           
+    //console.log(gpuresult3.length)
             //console.log(orderedMagsList);
 
             //tf.setBackend('webgl');
@@ -186,7 +155,7 @@
                 xbins: {  size: 1  }
             }],[{
                 x:fftwindow,
-                y:summedMags,
+                y:summedMags[0],
                 type: 'line',
                 marker: {
                     color: "rgba(100,255,100, 1)"
