@@ -115,21 +115,58 @@ var gpu = new GPU();
       .setDynamicArguments(true)
 
 
-//128 channel test, 1 second of data @ 512sps
+//128 channel test with bandpass.
             var sigList1D = [...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave,...sineWave];
             //console.log(sigList1D);
             console.time("gpuListDFT");
             listdft1D.setOutput([sigList1D.length]); //Set output to length of list of signals
             listdft1D.setLoopMaxIterations(sineWave.length); //Set loop size to the length of one signal (assuming all are uniform length
-            var gpuresult3 = listdft1D(sigList1D,sineWave.length);
+            gpuClass.listdft1D_windowed.setOutput([sigList1D.length]); //Set output to length of list of signals
+            gpuClass.listdft1D_windowed.setLoopMaxIterations(sineWave.length); //Set loop size to the length of one signal (assuming all are uniform length)
+            //var gpuresult2 = gpuClass.listdft2D(sigList2D);
+            //var gpuresult3 = gpuClass.listdft1D(sigList1D,sineWave.length/sec);
+            freqStart = 0;
+            freqEnd_nyquist = 50*2; //2x the end frequency of our bandpass (nyquist sampling rate)
 
-            console.timeEnd("gpuListDFT");
-        ;
-            
+            var gpuresult3 = gpuClass.listdft1D_windowed(sigList1D,sineWave.length/sec,freqStart,freqEnd_nyquist);
+            console.timeEnd("gpuListDFT (128 channels)");
+            //console.log(gpuresult3)
             orderedMagsList = [];
+            posMagsList = [];
             for(var i = 0; i < gpuresult3.length; i+=sineWave.length){
-                //console.log(i);
-                orderedMagsList.push([...gpuresult3.slice(Math.ceil(sineWave.length*.5+i),sineWave.length+i),...gpuresult3.slice(i,Math.ceil(sineWave.length*.5+i))]);
+                if(i < sineWave.length / sec) {
+                    posMagsList.push([...gpuresult3.slice(i,Math.ceil(sineWave.length*.5+i))]);
+                    orderedMagsList.push([...gpuresult3.slice(Math.ceil(sineWave.length*.5+i),sineWave.length+i),...gpuresult3.slice(i,Math.ceil(sineWave.length*.5+i))]);
+                }
+            }
+
+            var summedMags = [];
+            //console.log(posMagsList);
+            if(sec > 1) { //Need to sum results when sample time > 1 sec
+                //for(var k = 0; k < 128; k++){
+                    //console.log(k)
+                    for(var i = 0; i < posMagsList[0].length; i++ ){
+                        if(i < fs){
+                            summedMags.push(posMagsList[0][i]);
+                            //if (i === 0 ) { console.log(summedMags[0]); }
+                        }
+                        else {
+                            var j = i-fs*Math.floor(i/fs);
+                            summedMags[j] = (summedMags[j] * posMagsList[0][i-1]/posMagsList[0].length);
+                            //if (j === 0 ) { console.log(summedMags[j]); }
+                        }
+
+                    }
+                    summedMags = [...summedMags.slice(0,Math.ceil(summedMags.length*0.5))]
+                //}
+            }
+            else {summedMags = posMagsList[0];}
+            
+            //console.log(summedMags.length);
+
+            var fftwindow = [];
+            for (i = 0; i < Math.ceil(0.5*sineWave.length/sec); i++){
+                fftwindow.push(freqStart + (freqEnd_nyquist-freqStart)*i/(sineWave.length/sec));
             }
             
 ```
