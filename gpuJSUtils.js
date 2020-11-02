@@ -84,8 +84,8 @@ class gpuUtils {
         var imag = 0;
         for(var i = 0; i<len; i++){
           var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
-          real = real+signals[i+len*n]*Math.cos(shared);
-          imag = imag-signals[i+len*n]*Math.sin(shared);
+          real = real+signals[i+(len-1)*n]*Math.cos(shared);
+          imag = imag-signals[i+(len-1)*n]*Math.sin(shared);  
         }
         //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
         return [real,imag]; //mag(real,imag)
@@ -120,6 +120,22 @@ class gpuUtils {
         else{
           var n = Math.floor(this.thread.x/len);
           result = DFTlist(signals,len,this.thread.x-n*len,n);
+        }
+        return mag(result[0],result[1]);
+      })
+      .setDynamicOutput(true)
+      .setDynamicArguments(true)
+
+      this.listdft1D_windowed = this.gpu.createKernel(function(signals,len,freqStart,freqEnd){ //Will make a higher resolution DFT for a smaller frequency window.
+        var result = [0,0];
+        if(this.thread.x <= len){
+          var freq = ( (this.thread.x/len) * ( freqEnd - freqStart ) ) + freqStart;
+          result = DFT(signals,len,freq);
+        }
+        else{
+          var n = Math.floor(this.thread.x/len);
+          var freq = ( ( ( this.thread.x - n * len ) / len ) * ( freqEnd - freqStart ) ) + freqStart;
+          result = DFTlist(signals,len,freq-n*len,n);
         }
         return mag(result[0],result[1]);
       })
