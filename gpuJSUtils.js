@@ -91,9 +91,47 @@ class gpuUtils {
         return [real,imag]; //mag(real,imag)
       });
 
+
+      //Conjugated real and imaginary parts for iDFT
+      this.gpu.addFunction(function iDFT(amplitude,len,freq){ //inverse DFT to return time domain
+        var real = 0;
+        var imag = 0;
+        for(var i = 0; i<len; i++){
+          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
+          real = real+amplitude[i]*Math.sin(shared);
+          imag = imag-amplitude[i]*Math.cos(shared);
+        }
+        //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
+        return [real,imag]; //mag(real,imag)
+      });
+
+      this.gpu.addFunction(function iDFTlist(amplitudes,len,freq,n){ //inverse DFT to return time domain 
+        var real = 0;
+        var imag = 0;
+        for(var i = 0; i<len; i++){
+          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
+          real = real+amplitudes[i+(len-1)*n]*Math.sin(shared);
+          imag = imag-amplitudes[i+(len-1)*n]*Math.cos(shared);  
+        }
+        //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
+        return [imag,real]; //mag(real,imag)
+      });
+
       //Return frequency domain based on DFT
       this.dft = this.gpu.createKernel(function (signal,len){
         var result = DFT(signal,len,this.thread.x);
+          return mag(result[0],result[1]);
+      })
+      .setDynamicOutput(true)
+      .setDynamicArguments(true)
+      .setPipeline(true)
+      .setImmutable(true);
+      //.setOutput([signal.length]) //Call before running the kernel
+      //.setLoopMaxIterations(signal.length);
+
+      //Return time domain based on iDFT
+      this.idft = this.gpu.createKernel(function (amplitudes,len){
+        var result = iDFT(amplitudes,len,this.thread.x);
           return mag(result[0],result[1]);
       })
       .setDynamicOutput(true)
@@ -132,17 +170,20 @@ class gpuUtils {
       .setPipeline(true)
       .setImmutable(true);
 
-      this.listdft1D_windowed = this.gpu.createKernel(function(signals,len,freqStart,freqEnd){ //Will make a higher resolution DFT for a smaller frequency window.
+      this.listdft1D_windowed = this.gpu.createKernel(function(signals,sampleRate,freqStart,freqEnd){ //Will make a higher resolution DFT for a smaller frequency window.
         var result = [0,0];
-        if(this.thread.x <= len){
-          var freq = ( (this.thread.x/len) * ( freqEnd - freqStart ) ) + freqStart;
-          result = DFT(signals,len,freq);
+        if(this.thread.x <= sampleRate){
+          var freq = ( (this.thread.x/sampleRate) * ( freqEnd - freqStart ) ) + freqStart;
+          result = DFT(signals,sampleRate,freq);
         }
         else{
-          var n = Math.floor(this.thread.x/len);
-          var freq = ( ( ( this.thread.x - n * len ) / len ) * ( freqEnd - freqStart ) ) + freqStart;
-          result = DFTlist(signals,len,freq-n*len,n);
+          var n = Math.floor(this.thread.x/sampleRate);
+          var freq = ( ( ( this.thread.x - n * sampleRate ) / sampleRate ) * ( freqEnd - freqStart ) ) + freqStart;
+          result = DFTlist(signals,sampleRate,freq-n*sampleRate,n);
+          
         }
+        //var mags = mag(result[0],result[1]);
+
         return mag(result[0],result[1]);
       })
       .setDynamicOutput(true)
@@ -150,9 +191,36 @@ class gpuUtils {
       .setPipeline(true)
       .setImmutable(true);
 
+      //Return time domain signal after bandpass
+   
+   
     }
 
-    MultiChannelDFT(signalBuffer,nSeconds, texOut = false) {
+    gpuDFT(signalBuffer, nSeconds, texOut = false){
+
+      var nSamples = signalBuffer.length;
+      var sampleRate = nSamples/nSeconds;
+
+      this.dft.setOutput([signalBuffer.length]);
+      this.dft.setLoopMaxIterations(nSamples);
+
+      var outputTex = this.dft(signalBuffer, nSamples);
+      var output = null;
+      if(texOut === false){
+        var freqDist = this.makeFrequencyDistribution(nSamples, sampleRate);
+        var signalBufferProcessed = outputTex.toArray();
+        //console.log(signalBufferProcessed);
+        outputTex.delete();
+        return [freqDist,signalBufferProcessed]; //Returns x (frequencies) and y axis (magnitudes)
+      }
+      else {
+        var tex = outputTex; 
+        outputTex.delete(); 
+        return tex;
+      }
+    }
+
+    MultiChannelDFT(signalBuffer, nSeconds, texOut = false) {
       
       var signalBufferProcessed = [];
         
@@ -167,11 +235,21 @@ class gpuUtils {
       this.listdft1D.setOutput([signalBufferProcessed.length]); //Set output to length of list of signals
       this.listdft1D.setLoopMaxIterations(nSamplesPerChannel); //Set loop size to the length of one signal (assuming all are uniform length)
           
-      var outputTex = this.listdft1D(signalBufferProcessed,sampleRate);
+      var outputTex = this.listdft1D(signalBufferProcessed,nSamplesPerChannel);
       if(texOut === false){
+        var orderedMagsList = [];
+
+        var freqDist = this.makeFrequencyDistribution(nSamplesPerChannel, sampleRate);
         signalBufferProcessed = outputTex.toArray();
+        console.log(signalBufferProcessed);
+
+        for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
+          orderedMagsList.push(this.orderMagnitudes([...signalBufferProcessed.slice(i,i+nSamplesPerChannel)]));
+        }
+        //Now slice up the big buffer into individual arrays for each signal
+
         outputTex.delete();
-        return signalBufferProcessed;
+        return [freqDist,orderedMagsList]; //Returns x (frequencies) and y axis (magnitudes)
       }
       else {
         var tex = outputTex; 
@@ -200,38 +278,59 @@ class gpuUtils {
           
       var outputTex = this.listdft1D_windowed(signalBufferProcessed,sampleRate,freqStart,freqEnd_nyquist);
       if(texOut === true) { return outputTex; }
+      
       signalBufferProcessed = outputTex.toArray();
       outputTex.delete();
 
       //TODO: Optimize for SPEEEEEEED.. or just pass it str8 to a shader
+      var freqDist = this.bandPassWindow(freqStart,freqEnd,sampleRate);
+      return [freqDist, this.orderBPMagnitudes(signalBufferProcessed,nSeconds,sampleRate,nSamplesPerChannel)]; //Returns x (frequencies) and y axis (magnitudes)
+  }
 
-      var posMagsList = [];
-      //var orderedMagsList = [];
-      var summedMags = [];
-      for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
-        posMagsList.push([...signalBufferProcessed.slice(i,Math.ceil(nSamplesPerChannel*.5+i))]);
-        //orderedMagsList.push([...signalBufferProcessed.slice(Math.ceil(nSamplesPerChannel*.5+i),nSamplesPerChannel+i),...signalBufferProcessed.slice(i,Math.ceil(nSamplesPerChannel*.5+i))]);
-      }
-      //console.log(posMagsList);
-      
-      if(nSeconds > 1) { //Need to sum results when sample time > 1 sec
-        posMagsList.forEach((row, k) => {
-          summedMags.push([]);
-          for(var i = 0; i < row.length; i++ ){
-            if(i < sampleRate){
-                summedMags[k].push(row[i]);
-            }
-            else {
-                var j = i-Math.floor(Math.floor(i/sampleRate)*sampleRate)-1; //console.log(j);
-                summedMags[k][j] = (summedMags[k][j] * row[i-1]/sampleRate);
-            }
+  orderMagnitudes(unorderedMags){
+    return [...unorderedMags.slice(Math.ceil(unorderedMags.length*.5),unorderedMags.length),...unorderedMags.slice(0,Math.ceil(unorderedMags.length*.5))];  
+  }
+
+  makeFrequencyDistribution(FFTlength, sampleRate) {
+    var N = FFTlength; // FFT size
+    var df = sampleRate/N; // frequency resolution
+    
+    var freqDist = [];
+    for(var i=(-N/2); i<(N/2); i++) {
+      var freq = i*df;
+      freqDist.push(freq);
+    }
+    return freqDist;
+  }
+
+  //Order and sum positive magnitudes from bandpass DFT
+  orderBPMagnitudes(signalBufferProcessed,nSeconds,sampleRate,nSamplesPerChannel) {
+    var posMagsList = [];
+    for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
+      posMagsList.push([...signalBufferProcessed.slice(i,Math.ceil(nSamplesPerChannel*.5+i))]);
+     }
+
+    var summedMags = [];
+    
+    if(nSeconds > 1) { //Need to sum results when sample time > 1 sec
+      posMagsList.forEach((row, k) => {
+        summedMags.push([]);
+        for(var i = 0; i < row.length; i++ ){
+          if(i == 0){
+              summedMags[k]=row.slice(i,Math.floor(sampleRate));
+              i = Math.floor(sampleRate);
           }
-          summedMags[k] = [...summedMags[k].slice(0,Math.ceil(summedMags[k].length*0.5))]
-        })
-        //console.log(summedMags);
-        return summedMags;  
-      }
-      else {return posMagsList;}
+          else {
+              var j = i-Math.floor(Math.floor(i/sampleRate)*sampleRate)-1; //console.log(j);
+              summedMags[k][j] = (summedMags[k][j] * row[i-1]/sampleRate);
+          }
+        }
+        summedMags[k] = [...summedMags[k].slice(0,Math.ceil(summedMags[k].length*0.5))]
+      })
+      //console.log(summedMags);
+      return summedMags;  
+    }
+    else {return posMagsList;}
   }
 
   //Returns the x axis (frequencies) for the bandpass filter amplitudes
@@ -415,18 +514,6 @@ function cov1D(arr1,arr2){ //Return covariance vector of two 1D vectors of lengt
     result = cov1DKernel(arr1,arr2,mean1,mean2);
     console.timeEnd('cov1D');
     console.info(result);
-}
-
-function cov2D(mat1,mat2){ //Uhhhhh
-    var gpu = new GPU();
-
-    var matmean = gpu.createKernel(function(mat,len){ // Input 2d matrix with format [[],[]]
-
-    }).setOutput([1,1]);
-
-    var cov = gpu.createKernel(function(mat1,mat1mean,mat2,mat2mean){
-
-    }).setOutput([mat1[0].length,mat1[1].length])
 }
 
 function sumP(arr) { //Parallel Sum Operation
