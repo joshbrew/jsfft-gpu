@@ -1,5 +1,11 @@
 # jsfft-gpu
- Trying to translate jsfft for gpujs, it's confusing. Working very simplistic DFT example using series notation, plus a hacky but ultra fast FFT compared to jsfft, just increase the seconds of simulated data to show how the GPU performance stays fairly stable while CPU time skyrockets for the DFT example, but there are a lot of optimizations possible I will be trying. Check the console for timer results.
+GPU DFT implementation. It implements a straightforward discrete fourier transform on the GPU with gpu.js. Performance is much faster than jsfft and scales incredibly well.
+
+## Benchmark on RTX 2060 using gpuworker.js:
+
+##### 128 channels, 512sps, 1 second of data with bandpass filter: 8ms fastest, 20ms average.
+
+##### 1 channel, 512sps, 1 second of data: 1.9ms, 2.5ms average
 
 ## 30Hz with 150Hz interference added simulation.
 ![fftsnip](fftsnip.PNG)
