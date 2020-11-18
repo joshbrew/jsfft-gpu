@@ -1,6 +1,8 @@
 # jsfft-gpu
 GPU DFT implementation. It implements a straightforward discrete fourier transform on the GPU with gpu.js. Performance is much faster than jsfft and scales incredibly well.
 
+Based on this awesome DFT guide: https://github.com/trekhleb/javascript-algorithms/tree/master/src/algorithms/math/fourier-transform
+
 ## Benchmark on RTX 2060 using gpuworker.js:
 
 ##### 128 channels, 512sps, 1 second of data with bandpass filter: 8ms fastest, 20ms average.
