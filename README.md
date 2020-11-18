@@ -20,7 +20,7 @@ Based on this awesome DFT guide: https://github.com/trekhleb/javascript-algorith
 `gpu.MultiChannelDFT_BandPass(signalBuffer, nSeconds, freqStart, freqEnd, texOut = false)` - Multi channel DFT with a bandpass filter applied. Input 2D array with rows of equal widths, number of seconds, high pass frequency (lower bound), and low pass frequency (upper bound). Just set the filter to maximum nyquist sampling frequency for no low-pass filtering. Outputs a 2D array with the band pass window frequency distribution in the first index and the list of -positive- amplitudes in the next index.
 
 ## 30Hz with 150Hz interference added simulation.
-![fftsnip](fftsnip.PNG)
+![fftsnip](/demoincl/fftsnip.PNG)
 
 
 ## CPU simple DFT code
