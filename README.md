@@ -7,6 +7,16 @@ GPU DFT implementation. It implements a straightforward discrete fourier transfo
 
 ##### 1 channel, 512sps, 1 second of data: 1.9ms, 2.5ms average
 
+## Important functions
+
+`var gpu = new gpuUtils()`
+
+`gpu.gpuDFT(signalBuffer, nSeconds, texOut = false)` - Single channel DFT, give it a 1D array with the number of seconds of data captured and it will return a 2D array, the first index is a list of the frequency distribution (x-axis) of each amplitude, the second index is the array of amplitudes up to a max of the sample rate / 2 (the nyquist frequency of the sampling rate).
+
+`gpu.MultiChannelDFT(signalBuffer, nSeconds, texOut = false)` - Multi channel DFT, input a 2D array with rows of equal widths and the number of seconds sampled. Outputs a 2D array with the frequency distribution (x-axis) in the first index and then the list of amplitudes in the second index.
+
+`gpu.MultiChannelDFT_BandPass(signalBuffer, nSeconds, freqStart, freqEnd, texOut = false)` - Multi channel DFT with a bandpass filter applied. Input 2D array with rows of equal widths, number of seconds, high pass frequency (lower bound), and low pass frequency (upper bound). Just set the filter to maximum nyquist sampling frequency for no low-pass filtering. Outputs a 2D array with the band pass window frequency distribution in the first index and the list of -positive- amplitudes in the next index.
+
 ## 30Hz with 150Hz interference added simulation.
 ![fftsnip](fftsnip.PNG)
 
@@ -72,7 +82,7 @@ var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length/2),gpuresult.le
        
 ```
 
-## GPUJS multichannel DFT, I got 40ms for 128channels and 512 samples per channel on page refresh. Not bad!!!
+## GPUJS multichannel DFT
 ```
 var gpu = new GPU();
 
