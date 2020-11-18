@@ -72,7 +72,7 @@ var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length/2),gpuresult.le
        
 ```
 
-## GPUJS multichannel DFT, I got 40ms for 128channels and 512 samples per channel on page refresh. Not bad!!!
+## GPUJS multichannel DFT
 ```
 var gpu = new GPU();
 
