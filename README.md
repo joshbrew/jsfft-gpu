@@ -1,6 +1,8 @@
 # jsfft-gpu
 GPU DFT implementation. It implements a straightforward discrete fourier transform on the GPU with gpu.js. Performance is much faster than jsfft and scales incredibly well.
 
+Based on this awesome DFT guide: https://github.com/trekhleb/javascript-algorithms/tree/master/src/algorithms/math/fourier-transform
+
 ## Benchmark on RTX 2060 using gpuworker.js:
 
 ##### 128 channels, 512sps, 1 second of data with bandpass filter: 8ms fastest, 20ms average.
@@ -18,7 +20,7 @@ GPU DFT implementation. It implements a straightforward discrete fourier transfo
 `gpu.MultiChannelDFT_BandPass(signalBuffer, nSeconds, freqStart, freqEnd, texOut = false)` - Multi channel DFT with a bandpass filter applied. Input 2D array with rows of equal widths, number of seconds, high pass frequency (lower bound), and low pass frequency (upper bound). Just set the filter to maximum nyquist sampling frequency for no low-pass filtering. Outputs a 2D array with the band pass window frequency distribution in the first index and the list of -positive- amplitudes in the next index.
 
 ## 30Hz with 150Hz interference added simulation.
-![fftsnip](fftsnip.PNG)
+![fftsnip](/demoincl/fftsnip.PNG)
 
 
 ## CPU simple DFT code
