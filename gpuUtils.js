@@ -1,7 +1,13 @@
+import {GPU} from 'gpu.js'
 
-class gpuUtils {
-  constructor(){
+export class gpuUtils {
+  constructor(gpu=null){
+    if(gpu !== null){
+      this.gpu = gpu;
+    }
+    else {
       this.gpu = new GPU();
+    }
       this.kernel;
       this.PI = 3.141592653589793;
       this.SQRT1_2 = 0.7071067811865476
@@ -70,25 +76,29 @@ class gpuUtils {
       this.gpu.addFunction(function DFT(signal,len,freq){ //Extract a particular frequency
         var real = 0;
         var imag = 0;
+        var _len = 1/len;
+        var shared = 6.28318530718*freq*_len;
         for(var i = 0; i<len; i++){
-          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
-          real = real+signal[i]*Math.cos(shared);
-          imag = imag-signal[i]*Math.sin(shared);
+          var sharedi = shared*i; //this.thread.x is the target frequency
+          real = real+signal[i]*Math.cos(sharedi);
+          imag = imag-signal[i]*Math.sin(sharedi);
         }
         //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
-        return [real,imag]; //mag(real,imag)
+        return [real*_len,imag*_len]; //mag(real,imag)
       });
 
       this.gpu.addFunction(function DFTlist(signals,len,freq,n){ //Extract a particular frequency
         var real = 0;
         var imag = 0;
+        var _len = 1/len;
+        var shared = 6.28318530718*freq*_len;
         for(var i = 0; i<len; i++){
-          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
-          real = real+signals[i+(len-1)*n]*Math.cos(shared);
-          imag = imag-signals[i+(len-1)*n]*Math.sin(shared);  
+          var sharedi = shared*i; //this.thread.x is the target frequency
+          real = real+signals[i+(len-1)*n]*Math.cos(sharedi);
+          imag = imag-signals[i+(len-1)*n]*Math.sin(sharedi);  
         }
         //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
-        return [real,imag]; //mag(real,imag)
+        return [real*_len,imag*_len]; //mag(real,imag)
       });
 
 
@@ -96,25 +106,29 @@ class gpuUtils {
       this.gpu.addFunction(function iDFT(amplitudes,len,freq){ //inverse DFT to return time domain
         var real = 0;
         var imag = 0;
+        var _len = 1/len;
+        var shared = 6.28318530718*freq*_len;
         for(var i = 0; i<len; i++){
-          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
-          real = real+amplitudes[i+(len-1)*n]*Math.cos(shared);
-          imag = amplitudes[i+(len-1)*n]*Math.sin(shared)-imag;  
+          var sharedi = shared*i; //this.thread.x is the target frequency
+          real = real+amplitudes[i+(len-1)*n]*Math.cos(sharedi);
+          imag = amplitudes[i+(len-1)*n]*Math.sin(sharedi)-imag;  
         }
         //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
-        return [real,imag]; //mag(real,imag)
+        return [real*_len,imag*_len]; //mag(real,imag)
       });
 
       this.gpu.addFunction(function iDFTlist(amplitudes,len,freq,n){ //inverse DFT to return time domain 
         var real = 0;
         var imag = 0;
+        var _len = 1/len;
+        var shared = 6.28318530718*freq*_len
         for(var i = 0; i<len; i++){
-          var shared = 6.28318530718*freq*i/len; //this.thread.x is the target frequency
-          real = real+amplitudes[i+(len-1)*n]*Math.cos(shared);
-          imag = amplitudes[i+(len-1)*n]*Math.sin(shared)-imag;  
+          var sharedi = shared*i; //this.thread.x is the target frequency
+          real = real+amplitudes[i+(len-1)*n]*Math.cos(sharedi);
+          imag = amplitudes[i+(len-1)*n]*Math.sin(sharedi)-imag;  
         }
         //var mag = Math.sqrt(real[k]*real[k]+imag[k]*imag[k]);
-        return [imag,real]; //mag(real,imag)
+        return [imag*_len,real*_len]; //mag(real,imag)
       });
 
       //Return frequency domain based on DFT
@@ -184,18 +198,18 @@ class gpuUtils {
         }
         //var mags = mag(result[0],result[1]);
 
-        return mag(result[0],result[1]);
+        return mag(result[0]*2,result[1]*2); //Multiply result by 2 since we are only getting the positive results and want to estimate the actual amplitudes (positive = half power, reflected in the negative axis)
       })
       .setDynamicOutput(true)
       .setDynamicArguments(true)
       .setPipeline(true)
       .setImmutable(true);
 
-      //Return time domain signal after bandpass
-   
+
    
     }
 
+    //Input array buffer and the number of seconds of data
     gpuDFT(signalBuffer, nSeconds, texOut = false){
 
       var nSamples = signalBuffer.length;
@@ -220,6 +234,7 @@ class gpuUtils {
       }
     }
 
+    //Input array of array buffers of the same length and the number of seconds recorded
     MultiChannelDFT(signalBuffer, nSeconds, texOut = false) {
       
       var signalBufferProcessed = [];
@@ -241,7 +256,7 @@ class gpuUtils {
 
         var freqDist = this.makeFrequencyDistribution(nSamplesPerChannel, sampleRate);
         signalBufferProcessed = outputTex.toArray();
-        console.log(signalBufferProcessed);
+        //console.log(signalBufferProcessed);
 
         for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
           orderedMagsList.push(this.orderMagnitudes([...signalBufferProcessed.slice(i,i+nSamplesPerChannel)]));
@@ -260,7 +275,7 @@ class gpuUtils {
 
       
     //Input buffer of signals [[channel 0],[channel 1],...,[channel n]] with the same number of samples for each signal. Returns arrays of the positive DFT results in the given window.
-    MultiChannelDFT_BandPass(signalBuffer,nSeconds,freqStart,freqEnd, texOut = false) {
+    MultiChannelDFT_Bandpass(signalBuffer,nSeconds,freqStart,freqEnd, texOut = false) {
       
       var signalBufferProcessed = [];
         
@@ -330,6 +345,7 @@ class gpuUtils {
       //console.log(summedMags);
       return summedMags;  
     }
+    
     else {return posMagsList;}
   }
 
