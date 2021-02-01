@@ -21,12 +21,12 @@
         <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.15.1/dist/tf.min.js"></script>
          --->
         <script src="./demoincl/homebrew-cfft.js"></script>
-        <script src="d3.v5.min.js"></script>
-        <script src="plotly-latest.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.5.0/d3.min.js"></script>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <script src="./demoincl/fft.js"></script>
         <script src="gpu-browser.min.js" charset="UTF-8"></script>
         <script src="gpuUtils.js"></script>
-        <script>
+            <script>
             var sineWave = [];
             var t = [];
             var fs = 512; // Sample rate
@@ -101,7 +101,7 @@
             console.log("GPU.js performance can vary");
 
 
-            var orderedMags = [...gpuresult.slice(Math.ceil(gpuresult.length*.5),gpuresult.length),...gpuresult.slice(0,Math.ceil(gpuresult.length*.5))];
+            var orderedMags = gpuresult;//[...gpuresult.slice(Math.ceil(gpuresult.length*.5),gpuresult.length),...gpuresult.slice(0,Math.ceil(gpuresult.length*.5))];
             //console.log(orderedMags.length);
             //var sigList2D = [sineWave,sineWave,sineWave];
             
@@ -124,7 +124,7 @@
             //gpuClass.listdft1D_windowed.setLoopMaxIterations(sineWave.length); //Set loop size to the length of one signal (assuming all are uniform length)
            
             //var list = gpuClass.MultiChannelDFT(signalBuffer,sec);
-            var summedMags = gpuClass.MultiChannelDFT_BandPass(signalBuffer,sec,freqStart,freqEnd);
+            var summedMags = gpuClass.MultiChannelDFT_Bandpass(signalBuffer,sec,freqStart,freqEnd,true);
             //console.log(list)
             console.timeEnd("gpuListDFT (128 channels, ordered)");
             var fftwindow = gpuClass.bandPassWindow(freqStart,freqEnd,fs);

@@ -1,6 +1,6 @@
-import {GPU} from 'gpu.js'
-
-export class gpuUtils {
+//import {GPU} from 'gpu.js'
+//export
+class gpuUtils {
   constructor(gpu=null){
     if(gpu !== null){
       this.gpu = gpu;
@@ -274,32 +274,34 @@ export class gpuUtils {
     }
 
       
-    //Input buffer of signals [[channel 0],[channel 1],...,[channel n]] with the same number of samples for each signal. Returns arrays of the positive DFT results in the given window.
-    MultiChannelDFT_Bandpass(signalBuffer,nSeconds,freqStart,freqEnd, texOut = false) {
+     //Input buffer of signals [[channel 0],[channel 1],...,[channel n]] with the same number of samples for each signal. Returns arrays of the positive DFT results in the given window.
+  MultiChannelDFT_Bandpass(signalBuffer=[],nSeconds,freqStart,freqEnd, posOnly=true, texOut = false) {
+
+    var signalBufferProcessed = [];
       
-      var signalBufferProcessed = [];
-        
-      signalBuffer.forEach((row) => {
-        signalBufferProcessed.push(...row);
-      });
-      //console.log(signalBufferProcessed);
+    signalBuffer.forEach((row) => {
+      signalBufferProcessed.push(...row);
+    });
+    //console.log(signalBufferProcessed);
+
+    var freqEnd_nyquist = freqEnd*2;
+    var nSamplesPerChannel = signalBuffer[0].length;
+    var sampleRate = nSamplesPerChannel/nSeconds;
     
-      var freqEnd_nyquist = freqEnd*2;
-      var nSamplesPerChannel = signalBuffer[0].length;
-      var sampleRate = nSamplesPerChannel/nSeconds
+    this.listdft1D_windowed.setOutput([signalBufferProcessed.length]); //Set output to length of list of signals
+    this.listdft1D_windowed.setLoopMaxIterations(nSamplesPerChannel); //Set loop size to the length of one signal (assuming all are uniform length)
+        
+    var outputTex = this.listdft1D_windowed(signalBufferProcessed,sampleRate,freqStart,freqEnd_nyquist);
+    if(texOut === true) { return outputTex; }
+    
+    signalBufferProcessed = outputTex.toArray();
+    outputTex.delete();
 
-      this.listdft1D_windowed.setOutput([signalBufferProcessed.length]); //Set output to length of list of signals
-      this.listdft1D_windowed.setLoopMaxIterations(nSamplesPerChannel); //Set loop size to the length of one signal (assuming all are uniform length)
-          
-      var outputTex = this.listdft1D_windowed(signalBufferProcessed,sampleRate,freqStart,freqEnd_nyquist);
-      if(texOut === true) { return outputTex; }
-      
-      signalBufferProcessed = outputTex.toArray();
-      outputTex.delete();
-
-      //TODO: Optimize for SPEEEEEEED.. or just pass it str8 to a shader
-      var freqDist = this.bandPassWindow(freqStart,freqEnd,sampleRate);
-      return [freqDist, this.orderBPMagnitudes(signalBufferProcessed,nSeconds,sampleRate,nSamplesPerChannel)]; //Returns x (frequencies) and y axis (magnitudes)
+    //console.log(signalBufferProcessed)
+    //TODO: Optimize for SPEEEEEEED.. or just pass it str8 to a shader
+    var freqDist = this.bandPassWindow(freqStart,freqEnd,sampleRate,posOnly);
+    return [freqDist, this.orderBPMagnitudes(signalBufferProcessed,nSeconds,sampleRate,nSamplesPerChannel,posOnly)]; //Returns x (frequencies) and y axis (magnitudes)
+  
   }
 
   orderMagnitudes(unorderedMags){
@@ -319,18 +321,25 @@ export class gpuUtils {
   }
 
   //Order and sum positive magnitudes from bandpass DFT
-  orderBPMagnitudes(signalBufferProcessed,nSeconds,sampleRate,nSamplesPerChannel) {
-    var posMagsList = [];
-    for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
-      posMagsList.push([...signalBufferProcessed.slice(i,Math.ceil(nSamplesPerChannel*.5+i))]);
-     }
+  orderBPMagnitudes(signalBufferProcessed,nSeconds,sampleRate,nSamplesPerChannel,posOnly=true) {
+    var magList = [];
+    if(posOnly===true){
+      for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
+        magList.push([...signalBufferProcessed.slice(i,Math.ceil(nSamplesPerChannel*.5+i))]);
+      }
+    } else {
+      for(var i = 0; i < signalBufferProcessed.length; i+=nSamplesPerChannel){
+        magList.push([...signalBufferProcessed.slice(i+Math.ceil(nSamplesPerChannel*.5),nSamplesPerChannel),...signalBufferProcessed.slice(i,Math.ceil(nSamplesPerChannel*.5+i))]);
+      }
+    }
 
     var summedMags = [];
     var _sampleRate = 1/sampleRate;
     if(nSeconds > 1) { //Need to sum results when sample time > 1 sec
-      posMagsList.forEach((row, k) => {
+      magList.forEach((row, k) => {
         summedMags.push([]);
-        var _max = 1/Math.max(...row)
+        console.log(row)
+        var _max = 1/Math.max(...row); //uhh
         for(var i = 0; i < row.length; i++ ){
           if(i == 0){
               summedMags[k]=row.slice(i,Math.floor(sampleRate));
@@ -338,27 +347,45 @@ export class gpuUtils {
           }
           else {
               var j = i-Math.floor(Math.floor(i*_sampleRate)*sampleRate)-1; //console.log(j);
-              summedMags[k][j] = summedMags[k][j] * row[i-1]*_max;
+              summedMags[k][j] = summedMags[k][j] * row[i-1]*_max; 
           }
         }
-        summedMags[k] = [...summedMags[k].slice(0,Math.ceil(summedMags[k].length*0.5))]
+        if(posOnly === true){
+          summedMags[k] = [...summedMags[k].slice(0,Math.ceil(summedMags[k].length*0.5))]
+        }
+        else {
+          //summedMags[k] = [...summedMags.slice(Math.ceil(summedMags.length*.5),summedMags.length),...summedMags.slice(0,Math.ceil(summedMags.length*.5))]
+        }
       });
       //console.log(summedMags);
       return summedMags;  
     }
     
-    else {return posMagsList;}
+    else {return magList;}
   }
 
+
   //Returns the x axis (frequencies) for the bandpass filter amplitudes
-  bandPassWindow(freqStart,freqEnd,sampleRate) {
+  //Returns the x axis (frequencies) for the bandpass filter amplitudes
+  bandPassWindow(freqStart,freqEnd,sampleRate,posOnly=true) {
+
     var freqEnd_nyquist = freqEnd*2;
+    let increment = (freqEnd_nyquist - freqStart)/sampleRate;
+
     var fftwindow = [];
-      for (var i = 0; i < Math.ceil(0.5*sampleRate); i++){
-          fftwindow.push(freqStart + (freqEnd_nyquist-freqStart)*i/(sampleRate));
+    if(posOnly === true){
+      for (var i = 0; i < Math.ceil(0.5*sampleRate); i+=increment){
+          fftwindow.push(i);
       }
+    }
+    else{
+      for (var i = -Math.ceil(0.5*sampleRate); i < Math.ceil(0.5*sampleRate); i+=increment){
+        fftwindow.push(i);
+      }
+    }
     return fftwindow;
   }
+  
 }
 
 
